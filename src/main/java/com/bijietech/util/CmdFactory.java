@@ -2,10 +2,7 @@ package com.bijietech.util;
 
 
 import com.bijietech.exception.HasNoCmdException;
-import com.bijietech.model.Cmd;
-import com.bijietech.model.MultiQueryCmd;
-import com.bijietech.model.NormalCmd;
-import com.bijietech.model.QueryCmd;
+import com.bijietech.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,15 +17,12 @@ import java.util.regex.PatternSyntaxException;
 public class CmdFactory {
     private   static  final Logger logger = LoggerFactory.getLogger(CmdFactory.class);
     public static void main(String[] args) throws Exception{
-        String content = "帮我查看的得地撒丘问化暗室逢灯hha哈哈。";
-        System.out.println(content.replaceAll("[的|得|地]", ""));
-        System.out.println(content.indexOf("撒丘问化"));
-        System.out.println(getExchange(content, 2));
+        String content = "帮我下单 100 3。";
         System.out.println(getCmd(content,2));
     }
 
     public static String LOOK_WORD[] = {"了解", "查看", "查询", "查", "看",};
-    public static String ORDER_WORD[] = {"下单"};
+    public static String ORDER_WORD[] = {"买","卖"};
     public static String EXCHANGE[] = {"上文众申", "金一文化", "沙丘文化", "众申", "上文", "沙丘", "金一"};//, "上", "文", "众", "申", "沙", "丘", "金", "一"};
     public static String REPLAY_CONTENT[] = {"您说什么?", "我没听清楚您的意思...", "小贝刚睡醒，头脑不清..."};
 
@@ -39,10 +33,13 @@ public class CmdFactory {
      * @return
      */
     public static Cmd getCmd(String content,Integer level){
+        //解析订单命令
+        Cmd cmd = verifyOrderCmd(content,level);
+        if(cmd!=null)
+            return cmd;
         content = stringFilter(content);
-        Cmd cmd = null;
         String lookCmd = verifyCmd(content);
-        //普通的命令
+        //非查看命令
         if(lookCmd==null)
         {
             cmd = new NormalCmd();
@@ -82,6 +79,37 @@ public class CmdFactory {
     }
 
     /**
+     * 订单
+     * @param content
+     * @param l
+     * @return
+     */
+    public static Cmd verifyOrderCmd(String content,Integer l)
+    {
+        Cmd cmd=null;
+        content=getRealCmd(content);
+        if(content==null)
+            return  null;
+        String []order=content.split(" ");
+        if(order.length!=5)
+            return null;
+        if(order[0].equals(ORDER_WORD[0]))
+        {
+            cmd=new BuyCmd();
+        }else if(order[0].equals(ORDER_WORD[1]))
+        {
+            cmd=new SellCmd();
+        }else {
+            return null;
+        }
+        cmd.setContent(content);
+        ((OrderCmd)cmd).setExchangeName(order[1]);
+        ((OrderCmd)cmd).setSymbol(order[2]);
+        ((OrderCmd)cmd).setNum(Double.parseDouble(order[3]));
+        ((OrderCmd)cmd).setPrice(Double.parseDouble(order[4]));
+        return cmd;
+    }
+    /**
      * 验证是不是有命令
      *
      * @param content
@@ -94,7 +122,19 @@ public class CmdFactory {
         }
         return null;
     }
-
+    /**
+     * 验证是不是有命令
+     *
+     * @param content
+     */
+    public static String verifyOrderCmd(String content) {
+        for (String s : ORDER_WORD) {
+            if (content.contains(s)) {
+                return s;
+            }
+        }
+        return null;
+    }
     public static String getRealCmd(String content) {
         int index = 0;
         for (String s : LOOK_WORD) {
